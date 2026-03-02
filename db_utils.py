@@ -135,11 +135,15 @@ class DBUtils:
                 if hasattr(pub_at, 'isoformat'):
                     pub_at = pub_at.isoformat()
                 
+                # 获取当前东八区时间作为crawled_at
+                crawled_at = datetime.now(timezone(timedelta(hours=8))).isoformat()
+                
                 item_data = {
                     "title": item.get('title', ''),
                     "url": item.get('url', ''),
                     "content": item.get('content', ''),
-                    "pub_at": pub_at
+                    "pub_at": pub_at,
+                    "crawled_at": crawled_at
                 }
                 items.append(item_data)
             
@@ -173,6 +177,55 @@ class DBUtils:
         except Exception as e:
             print(f"❌ {source_name}：推送过程中发生未知错误 - {e}")
             return False
+    
+    def push_daily_status(self, date_str, success_count, fail_count):
+        """推送每日爬虫状态数据到API接口
+        
+        Args:
+            date_str: 日期字符串，格式为 YYYY-MM-DD
+            success_count: 成功爬取的文章数
+            fail_count: 失败的爬取数
+            
+        Returns:
+            bool: 是否成功推送
+        """
+        target_url = "http://seoularmv4.09282018.xyz:5000/api/receive-daily-status"
+        
+        try:
+            # 使用东八区时间作为date
+            # 如果没有提供date_str，则使用当前东八区日期
+            if not date_str:
+                east8_datetime = datetime.now(timezone(timedelta(hours=8)))
+                east8_date = east8_datetime.date()
+                date_str = east8_date.isoformat()
+            
+            # 构造payload
+            payload = {
+                "date": date_str,
+                "success_count": success_count,
+                "fail_count": fail_count
+            }
+            
+            # 发送POST请求
+            headers = {"Content-Type": "application/json; charset=utf-8"}
+            response = requests.post(
+                target_url,
+                data=json.dumps(payload, ensure_ascii=False).encode('utf-8'),
+                headers=headers,
+                timeout=10
+            )
+            
+            # 检查响应状态
+            response.raise_for_status()
+            print(f"✅ 成功推送每日状态数据 - 日期={date_str}, 成功={success_count}, 失败={fail_count}")
+            return True
+            
+        except requests.exceptions.RequestException as e:
+            print(f"❌ 每日状态数据推送失败 - {e}")
+            return False
+        except Exception as e:
+            print(f"❌ 推送过程中发生未知错误 - {e}")
+            return False
 
 # 创建全局实例
 db_utils = DBUtils()
@@ -202,3 +255,17 @@ def push_to_api(data_list, source_name):
         bool: 是否成功推送
     """
     return db_utils.push_to_api(data_list, source_name)
+
+# 便捷函数
+def push_daily_status(date_str, success_count, fail_count):
+    """便捷函数：推送每日爬虫状态数据到API接口
+    
+    Args:
+        date_str: 日期字符串，格式为 YYYY-MM-DD
+        success_count: 成功爬取的文章数
+        fail_count: 失败的爬取数
+        
+    Returns:
+        bool: 是否成功推送
+    """
+    return db_utils.push_daily_status(date_str, success_count, fail_count)
