@@ -126,7 +126,7 @@ class DBUtils:
             print(f"⚠️  {source_name}：没有数据需要推送，跳过。")
             return {"status": "skipped", "message": "没有数据需要推送"}
         
-        target_url = "http://seoularmv4.09282018.xyz:5000/api/receive-data"
+        target_url = "http://47.114.109.178:5000/api/receive-data"
         
         try:
             # 构造JSON结构（按照接口示例格式）
@@ -194,7 +194,7 @@ class DBUtils:
         Returns:
             dict: 推送结果，包含status和message
         """
-        target_url = "http://seoularmv4.09282018.xyz:5000/api/receive-daily-status"
+        target_url = "http://47.114.109.178:5000/api/receive-daily-status"
         
         try:
             # 使用东八区时间作为date
