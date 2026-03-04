@@ -199,6 +199,24 @@ class CrawlerManager:
             print(f"📊 API推送统计: 成功 {api_success_count} 个, 失败 {api_error_count} 个")
         print("-" * 40)
         
+        # 推送每日状态数据到API
+        try:
+            from db_utils import push_daily_status
+            date_str = start_datetime.date().isoformat()
+            daily_success_count = total_crawl  # 使用总抓取数量作为成功数
+            daily_fail_count = error_count  # 使用失败的爬虫数作为失败数
+            print("\n📅 推送每日状态数据...")
+            daily_status_result = push_daily_status(date_str, daily_success_count, daily_fail_count)
+            if isinstance(daily_status_result, dict):
+                status = daily_status_result.get('status', 'unknown')
+                message = daily_status_result.get('message', '')
+                if status == 'success':
+                    print(f"✅ 每日状态数据推送成功：{message}")
+                else:
+                    print(f"❌ 每日状态数据推送失败：{message}")
+        except Exception as e:
+            print(f"⚠️  推送每日状态数据时发生错误：{e}")
+        
         # 发送飞书通知
         if send_crawler_result:
             print("\n📤 正在发送飞书通知...")
