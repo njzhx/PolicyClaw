@@ -15,6 +15,14 @@ jobs:
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
+
+      - name: Set timezone to Beijing (UTC+8)
+        run: |
+          # 方法1：推荐使用timedatectl（Ubuntu 16.04+ 通用）
+          sudo timedatectl set-timezone Asia/Shanghai
+          # 验证时区是否设置成功（可选，用于调试）
+          timedatectl
+          date
       
       - name: 设置 Python
         uses: actions/setup-python@v5
