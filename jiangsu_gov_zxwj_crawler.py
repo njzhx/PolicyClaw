@@ -88,7 +88,7 @@ def scrape_data():
                 try:
                     detail_resp = requests.get(article_url, headers=headers, timeout=15)
                     detail_soup = BeautifulSoup(detail_resp.content, 'html.parser')
-                    content_elem = detail_soup.select_one('.content') or detail_soup.select_one('#content')
+                    content_elem = detail_soup.find('div', class_='left')
                     if content_elem:
                         content = content_elem.get_text(strip=True)
                 except Exception:
