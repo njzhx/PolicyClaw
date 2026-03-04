@@ -181,14 +181,15 @@ class FeishuNotifier:
                 ])
             else:
                 content.append([
-                    {"tag": "text", "text": f"� {name}"}
+                    {"tag": "text", "text": f"📦 {name}"}
                 ])
             
             # 状态行
             status_emoji = "✅" if result['status'] == 'success' else "❌"
             if result['status'] == 'success':
+                filter_count = result.get('filter_count', 0)
                 content.append([
-                    {"tag": "text", "text": f"{status_emoji} 抓取 {result['crawl_count']} 条，写入数据库 {result['write_count']} 条"}
+                    {"tag": "text", "text": f"{status_emoji} 过滤掉 {filter_count} 条，抓取 {result['crawl_count']} 条，写入 {result['write_count']} 条"}
                 ])
             else:
                 content.append([

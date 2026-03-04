@@ -97,6 +97,7 @@ class CrawlerManager:
                 # 处理可能的元组返回值（包含API推送结果）
                 crawl_count = 0
                 write_count = 0
+                filter_count = 0
                 api_push_result = None
                 
                 if isinstance(result, tuple) and len(result) == 2:
@@ -108,10 +109,18 @@ class CrawlerManager:
                     crawl_count = len(data_list)
                     write_count = len(data_list)
                 
+                # 尝试从爬虫输出中提取过滤数量
+                import re
+                output = dual_out.getvalue() + dual_err.getvalue()
+                filter_match = re.search(r'过滤掉\s*(\d+)\s*条', output)
+                if filter_match:
+                    filter_count = int(filter_match.group(1))
+                
                 self.results[name] = {
                     'status': 'success',
                     'crawl_count': crawl_count,
                     'write_count': write_count,
+                    'filter_count': filter_count,
                     'execution_time': round(execution_time, 2),
                     'timestamp': datetime.now().isoformat(),
                     'target_url': target_url,
