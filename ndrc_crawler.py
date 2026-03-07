@@ -160,7 +160,7 @@ def save_to_supabase(data_list):
     
     使用统一的数据库工具函数
     """
-    return save_to_policy(data_list, "国家发改委爬虫")
+    return save_to_policy(data_list, "国家发改委")
 
 # ==========================================
 # 主函数

@@ -220,7 +220,7 @@ def save_to_supabase(data_list):
     
     使用统一的数据库工具函数
     """
-    return save_to_policy(data_list, "人民网财经爬虫")
+    return save_to_policy(data_list, "人民网财经")
 
 # ==========================================
 # 主函数
@@ -230,7 +230,7 @@ def run():
     try:
         data, _ = scrape_data()
         result = save_to_supabase(data)
-        print(f"💾 写入数据库: {len(data)} 条")
+        print(f"� 写入数据库: {len(data)} 条")
         print("----------------------------------------")
         # 返回实际抓取的数据，爬虫管理器会根据此计算数量
         return result

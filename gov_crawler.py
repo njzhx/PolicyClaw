@@ -134,7 +134,7 @@ def scrape_data():
 
 
 def save_to_supabase(data_list):
-    return save_to_policy(data_list, "中国政府网爬虫")
+    return save_to_policy(data_list, "中国政府网")
 
 
 def run():
