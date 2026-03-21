@@ -160,8 +160,8 @@ def get_article_content(url):
         
         soup = BeautifulSoup(response.content, 'html.parser')
         
-        # 尝试多种选择器获取内容
-        content_elem = soup.select_one('.article-content')
+        # 尝试使用指定的XPath选择器
+        content_elem = soup.select_one('div[aria-label="正文区"]')
         
         # 尝试常见的内容选择器
         selectors = [
