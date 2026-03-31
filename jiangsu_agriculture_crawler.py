@@ -168,6 +168,7 @@ def run():
             result, api_push_result = save_to_supabase(data)
             print(f"💾 写入数据库: {len(result)} 条")
             print("----------------------------------------")
+            return result
         else:
             print("💾 写入数据库: 0 条")
             print("----------------------------------------")
