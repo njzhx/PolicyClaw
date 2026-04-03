@@ -37,9 +37,12 @@ def scrape_data():
     tz_utc8 = timezone(timedelta(hours=8))
     yesterday = (datetime.now(tz_utc8) - timedelta(days=1)).date()
     
+    # 增加针对 AJAX 请求的伪装头，让它看起来完全像网页自身的请求
     headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': '*/*',
+        'Accept': 'application/xml, text/xml, */*; q=0.01',
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
         'Connection': 'keep-alive'
     }
 
@@ -50,22 +53,34 @@ def scrape_data():
 
         print(f"🔍 正在请求接口: {target['name']}")
         
-        params = {
-            'page': 1,
+        # 1. 把数量限制放在 URL 参数里 (抓取前40条)
+        request_url = f"{PROXY_URL}?startrecord=1&endrecord=40&perpage=40"
+        
+        # 2. 把接头暗号放在 POST 的表单数据 (Form Data) 里
+        form_data = {
+            'col': 1,
             'appid': 1,
             'webid': 12,
             'path': '/',
             'columnid': target['columnid'],
+            'sourceContentType': 1,
             'unitid': target['unitid'],
+            'webname': '江苏省文化和旅游厅',
             'permissiontype': 0
         }
         
         try:
-            response = requests.get(PROXY_URL, params=params, headers=headers, timeout=30)
+            # 🚨 关键修复：使用 requests.post 发送请求！
+            response = requests.post(request_url, data=form_data, headers=headers, timeout=30)
             response.encoding = 'utf-8'
             
+            # 正则提取 XML 里的每一条记录
             records = re.findall(r'<record><!\[CDATA\[([\s\S]*?)\]\]></record>', response.text)
             
+            # 如果没抓到数据，打印提示方便排查
+            if not records:
+                print(f"⚠️ {target['name']} 接口返回为空，请检查接口状态或 IP 是否受限！")
+                
             filtered_count = 0
 
             for record_html in records:
@@ -109,14 +124,16 @@ def scrape_data():
                     else:
                         filtered_count += 1
                         
-            print(f"⏭️  {target['name']}：过滤掉 {filtered_count} 条非目标日期的数据")
+            # 只有当有数据被遍历时，才打印过滤条数
+            if records:
+                print(f"⏭️  {target['name']}：过滤掉 {filtered_count} 条非目标日期的数据")
 
         except Exception as e:
             print(f"❌ {target['name']} 接口访问失败: {e}")
 
     print(f"✅ 江苏省文旅厅爬虫：成功抓取 {len(policies)} 条前一天数据")
     
-    # 打印页面最新5条（格式与其他爬虫完全一致）
+    # 打印页面最新5条
     if all_items:
         print("📊 页面最新5条是：")
         for i, item in enumerate(all_items[:5], 1):
