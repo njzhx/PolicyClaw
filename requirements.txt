@@ -4,4 +4,3 @@ supabase
 selenium
 webdriver-manager
 dnspython
-selenium
