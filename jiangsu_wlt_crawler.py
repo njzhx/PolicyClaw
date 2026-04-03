@@ -1,6 +1,6 @@
 import os
 import re
-import requests
+import time
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta, timezone
 from urllib.parse import urljoin
@@ -8,79 +8,71 @@ from urllib.parse import urljoin
 # 导入数据库工具
 from db_utils import save_to_policy
 
+# 🌟 引入 Selenium 自动化浏览器
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
 # ==========================================
-# 1. 终极配置：双栏目抓取
+# 1. 终极配置：直接填网页原地址，不用管接口了！
 # ==========================================
 TARGETS = [
     {
         "name": "江苏省文旅厅_焦点新闻", 
-        "columnid": "695", 
-        "unitid": "423807", 
         "base_url": "https://wlt.jiangsu.gov.cn/col/col695/index.html"
     },
     {
         "name": "江苏省文旅厅_通知公告", 
-        "columnid": "699", 
-        "unitid": "423807", 
         "base_url": "https://wlt.jiangsu.gov.cn/col/col699/index.html"
     }
 ]
+
+def setup_driver():
+    """配置并启动无头浏览器 (后台隐身运行)"""
+    options = Options()
+    options.add_argument('--headless')  # 无头模式，不在屏幕上显示窗口
+    options.add_argument('--disable-gpu')
+    options.add_argument('--no-sandbox') # Linux 环境必备
+    options.add_argument('--disable-dev-shm-usage')
+    # 伪装成正常浏览器
+    options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+    
+    return webdriver.Chrome(options=options)
 
 def scrape_data():
     policies = []
     all_items = []
     
-    # 获取北京时间昨天日期
     tz_utc8 = timezone(timedelta(hours=8))
     yesterday = (datetime.now(tz_utc8) - timedelta(days=1)).date()
     
-    # 🌟 装备 1：开启长连接会话（维持 Cookie）
-    session = requests.Session()
-    session.headers.update({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'zh-CN,zh;q=0.9',
-        'Connection': 'keep-alive',
-    })
+    print("🚀 正在启动自动化浏览器以突破 521 防护盾...")
+    driver = setup_driver()
 
-    # 先访问一下主页，骗取防火墙的初始 Cookie (忽略任何报错)
     try:
-        session.get('https://wlt.jiangsu.gov.cn/', timeout=10)
-    except:
-        pass
-
-    for target in TARGETS:
-        if not target["unitid"].isdigit():
-            continue
-
-        print(f"🔍 正在请求接口: {target['name']}")
-        
-        # 🌟 装备 2：增加防盗链标识
-        session.headers.update({'Referer': target['base_url']})
-        
-        # 🌟 装备 3：使用网页原生的备用链接（纯 GET 请求）
-        request_url = (
-            f"https://wlt.jiangsu.gov.cn/module/web/jpage/dataproxy.jsp?"
-            f"page=1&appid=1&webid=12&path=/&columnid={target['columnid']}&"
-            f"unitid={target['unitid']}&"
-            f"webname=%25E6%25B1%259F%25E8%258B%258F%25E7%259C%2581%25E6%2596%2587%25E5%258C%2596%25E5%2592%258C%25E6%2597%2585%25E6%25B8%25B8%25E5%258E%2585&"
-            f"permissiontype=0"
-        )
-        
-        try:
-            response = session.get(request_url, timeout=30)
-            response.encoding = 'utf-8'
+        for target in TARGETS:
+            print(f"🔍 正在访问: {target['name']}")
             
-            records = re.findall(r'<record><!\[CDATA\[([\s\S]*?)\]\]></record>', response.text)
+            # 1. 直接让浏览器打开网页
+            driver.get(target['base_url'])
             
-            # 🕵️‍♂️ 终极排错：如果没抓到数据，看看服务器到底返回了什么鬼！
+            # 🌟 核心魔法：耐心等待 3 秒。
+            # 这 3 秒内，浏览器会自动执行那段复杂的 JS，计算出 Cookie，并自动刷新页面！
+            time.sleep(3)
+            
+            # 获取经过浏览器渲染后的真实网页源码
+            html = driver.page_source
+            
+            # 提取原网页隐藏在 script 标签里的 XML 数据
+            records = re.findall(r'<record><!\[CDATA\[([\s\S]*?)\]\]></record>', html)
+            
             if not records:
-                print(f"⚠️ 接口未能返回有效文章。HTTP状态码: {response.status_code}")
-                print(f"🛑 服务器实际返回内容(前200字)如下：\n{response.text[:200]}")
-                print("-" * 40)
+                print(f"⚠️ {target['name']} 未提取到数据，请检查。")
                 continue
                 
             filtered_count = 0
+
+            # 这个列表用来存详情页的链接，避免在循环中直接跳转打断节奏
+            to_fetch_details = []
 
             for record_html in records:
                 soup_item = BeautifulSoup(record_html, 'html.parser')
@@ -90,45 +82,50 @@ def scrape_data():
                 if a_tag and date_match:
                     title = a_tag.get('title') or a_tag.get_text(strip=True)
                     href = a_tag.get('href')
-                    link = urljoin(target["base_url"], href)
+                    link = urljoin(target['base_url'], href)
                     pub_at = datetime.strptime(date_match.group(), '%Y-%m-%d').date()
                     
                     item_info = {'title': title, 'pub_at': pub_at, 'url': link}
                     if item_info not in all_items:
                         all_items.append(item_info)
 
-                    # 严格日期判断逻辑：只抓昨天的数据
-                    if pub_at == yesterday: 
-                        content = ""
-                        try:
-                            # 详情页也使用 session 访问
-                            detail_res = session.get(link, timeout=20)
-                            detail_res.encoding = 'utf-8'
-                            detail_soup = BeautifulSoup(detail_res.text, 'html.parser')
-                            
-                            content_elem = detail_soup.select_one('#UCAP-CONTENT') or detail_soup.select_one('.bt-content')
-                            if content_elem:
-                                content = content_elem.get_text(strip=True)
-                        except Exception as e:
-                            print(f"⚠️ 详情页抓取失败 {link}: {e}")
-
-                        category_name = target["name"].split('_')[1]
-                        policies.append({
+                    # 如果是昨天的数据，加入待抓取正文列表
+                    if pub_at == yesterday:
+                        to_fetch_details.append({
                             'title': title,
                             'url': link,
                             'pub_at': pub_at,
-                            'content': content,
                             'source': '江苏省文旅厅',
-                            'category': category_name
+                            'category': target["name"].split('_')[1]
                         })
                     else:
                         filtered_count += 1
                         
-            if records:
-                print(f"⏭️  {target['name']}：过滤掉 {filtered_count} 条非目标日期的数据")
+            # 2. 依次去抓取详情页正文（同样使用浏览器，完美绕过防护）
+            for item in to_fetch_details:
+                print(f"✨ 发现目标文章，正在抓取正文: {item['title']}")
+                content = ""
+                try:
+                    driver.get(item['url'])
+                    time.sleep(2) # 给页面一点加载时间
+                    detail_soup = BeautifulSoup(driver.page_source, 'html.parser')
+                    
+                    content_elem = detail_soup.select_one('#UCAP-CONTENT') or detail_soup.select_one('.bt-content')
+                    if content_elem:
+                        content = content_elem.get_text(strip=True)
+                except Exception as e:
+                    print(f"⚠️ 详情页抓取失败: {e}")
+                
+                item['content'] = content
+                policies.append(item)
 
-        except Exception as e:
-            print(f"❌ {target['name']} 接口访问失败: {e}")
+            print(f"⏭️  {target['name']}：过滤掉 {filtered_count} 条非目标日期的数据")
+
+    except Exception as e:
+        print(f"❌ 爬虫运行发生异常: {e}")
+    finally:
+        # 务必关闭浏览器，释放内存
+        driver.quit()
 
     print(f"✅ 江苏省文旅厅爬虫：成功抓取 {len(policies)} 条前一天数据")
     
