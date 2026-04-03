@@ -26,9 +26,6 @@ TARGETS = [
     }
 ]
 
-# Hanweb 系统的标准数据请求接口
-PROXY_URL = "https://wlt.jiangsu.gov.cn/module/web/jpage/dataproxy.jsp"
-
 def scrape_data():
     policies = []
     all_items = []
@@ -37,49 +34,51 @@ def scrape_data():
     tz_utc8 = timezone(timedelta(hours=8))
     yesterday = (datetime.now(tz_utc8) - timedelta(days=1)).date()
     
-    # 增加针对 AJAX 请求的伪装头，让它看起来完全像网页自身的请求
-    headers = {
+    # 🌟 装备 1：开启长连接会话（维持 Cookie）
+    session = requests.Session()
+    session.headers.update({
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'application/xml, text/xml, */*; q=0.01',
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Connection': 'keep-alive'
-    }
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'zh-CN,zh;q=0.9',
+        'Connection': 'keep-alive',
+    })
+
+    # 先访问一下主页，骗取防火墙的初始 Cookie (忽略任何报错)
+    try:
+        session.get('https://wlt.jiangsu.gov.cn/', timeout=10)
+    except:
+        pass
 
     for target in TARGETS:
         if not target["unitid"].isdigit():
-            print(f"⚠️ {target['name']} 跳过：请先在代码里填入正确的 unitid！")
             continue
 
         print(f"🔍 正在请求接口: {target['name']}")
         
-        # 1. 把数量限制放在 URL 参数里 (抓取前40条)
-        request_url = f"{PROXY_URL}?startrecord=1&endrecord=40&perpage=40"
+        # 🌟 装备 2：增加防盗链标识
+        session.headers.update({'Referer': target['base_url']})
         
-        # 2. 把接头暗号放在 POST 的表单数据 (Form Data) 里
-        form_data = {
-            'col': 1,
-            'appid': 1,
-            'webid': 12,
-            'path': '/',
-            'columnid': target['columnid'],
-            'sourceContentType': 1,
-            'unitid': target['unitid'],
-            'webname': '江苏省文化和旅游厅',
-            'permissiontype': 0
-        }
+        # 🌟 装备 3：使用网页原生的备用链接（纯 GET 请求）
+        request_url = (
+            f"https://wlt.jiangsu.gov.cn/module/web/jpage/dataproxy.jsp?"
+            f"page=1&appid=1&webid=12&path=/&columnid={target['columnid']}&"
+            f"unitid={target['unitid']}&"
+            f"webname=%25E6%25B1%259F%25E8%258B%258F%25E7%259C%2581%25E6%2596%2587%25E5%258C%2596%25E5%2592%258C%25E6%2597%2585%25E6%25B8%25B8%25E5%258E%2585&"
+            f"permissiontype=0"
+        )
         
         try:
-            # 🚨 关键修复：使用 requests.post 发送请求！
-            response = requests.post(request_url, data=form_data, headers=headers, timeout=30)
+            response = session.get(request_url, timeout=30)
             response.encoding = 'utf-8'
             
-            # 正则提取 XML 里的每一条记录
             records = re.findall(r'<record><!\[CDATA\[([\s\S]*?)\]\]></record>', response.text)
             
-            # 如果没抓到数据，打印提示方便排查
+            # 🕵️‍♂️ 终极排错：如果没抓到数据，看看服务器到底返回了什么鬼！
             if not records:
-                print(f"⚠️ {target['name']} 接口返回为空，请检查接口状态或 IP 是否受限！")
+                print(f"⚠️ 接口未能返回有效文章。HTTP状态码: {response.status_code}")
+                print(f"🛑 服务器实际返回内容(前200字)如下：\n{response.text[:200]}")
+                print("-" * 40)
+                continue
                 
             filtered_count = 0
 
@@ -102,7 +101,8 @@ def scrape_data():
                     if pub_at == yesterday: 
                         content = ""
                         try:
-                            detail_res = requests.get(link, headers=headers, timeout=20)
+                            # 详情页也使用 session 访问
+                            detail_res = session.get(link, timeout=20)
                             detail_res.encoding = 'utf-8'
                             detail_soup = BeautifulSoup(detail_res.text, 'html.parser')
                             
@@ -124,7 +124,6 @@ def scrape_data():
                     else:
                         filtered_count += 1
                         
-            # 只有当有数据被遍历时，才打印过滤条数
             if records:
                 print(f"⏭️  {target['name']}：过滤掉 {filtered_count} 条非目标日期的数据")
 
@@ -133,7 +132,6 @@ def scrape_data():
 
     print(f"✅ 江苏省文旅厅爬虫：成功抓取 {len(policies)} 条前一天数据")
     
-    # 打印页面最新5条
     if all_items:
         print("📊 页面最新5条是：")
         for i, item in enumerate(all_items[:5], 1):
