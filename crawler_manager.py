@@ -511,7 +511,7 @@ if __name__ == "__main__":
         manager.register_crawler("江苏省科学技术厅_科技动态", jiangsu_kxjst_kjdt_crawler.run, jiangsu_kxjst_kjdt_crawler)
     except ImportError as e:
         print(f"⚠️  导入江苏省科学技术厅_科技动态爬虫失败: {e}")
-    
+
     # 执行所有爬虫
     if manager.crawlers:
         results = manager.run_all_crawlers()
