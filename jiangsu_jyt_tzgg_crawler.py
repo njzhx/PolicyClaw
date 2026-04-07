@@ -70,7 +70,7 @@ def scrape_data():
             # 提取标题、URL和日期
             title_match = re.search(r'title=(["\'])(.*?)\1', record)
             url_match = re.search(r'href=(["\'])(.*?)\1', record)
-            date_match = re.search(r'\[(\d{4}-\d{2}-\d{2})\]', record)
+            date_match = re.search(r'(\d{4}-\d{2}-\d{2})', record)
             
             if not all([title_match, url_match, date_match]):
                 continue
@@ -91,9 +91,9 @@ def scrape_data():
                 # 处理URL
                 if not url.startswith('http'):
                     if url.startswith('/'):
-                        url = f"https://nynct.jiangsu.gov.cn{url}"
+                        url = f"https://jyt.jiangsu.gov.cn{url}"
                     else:
-                        url = f"https://nynct.jiangsu.gov.cn/{url}"
+                        url = f"https://jyt.jiangsu.gov.cn/{url}"
                 
                 # 抓取详情页内容
                 content = ""
@@ -102,7 +102,7 @@ def scrape_data():
                     detail_response.raise_for_status()
                     detail_soup = BeautifulSoup(detail_response.content, 'html.parser')
                     # 查找内容容器
-                    content_elem = detail_soup.select_one('.bt-content.zoom.clearfix')
+                    content_elem = detail_soup.select_one('#zoom')
                     if content_elem:
                         content = content_elem.get_text(strip=True)
                         # 移除来源信息
@@ -117,13 +117,13 @@ def scrape_data():
                     'content': content,
                     'selected': False,
                     'category': '',
-                    'source': '江苏省农业农村厅通知公告'
+                    'source': '江苏省教育厅通知公告'
                 }
                 policies.append(policy_data)
             else:
                 non_target_date_items += 1
         
-        print(f"✅ 江苏省农业农村厅通知公告爬虫：成功抓取 {target_date_items} 条前一天数据")
+        print(f"✅ 江苏省教育厅通知公告爬虫：成功抓取 {target_date_items} 条前一天数据")
         print(f"⏭️  过滤掉 {non_target_date_items} 条非目标日期的数据")
         
         # 收集所有文章信息用于显示最新5条
@@ -131,7 +131,7 @@ def scrape_data():
         for record in records:
             title_match = re.search(r'title=(["\'])(.*?)\1', record)
             url_match = re.search(r'href=(["\'])(.*?)\1', record)
-            date_match = re.search(r'\[(\d{4}-\d{2}-\d{2})\]', record)
+            date_match = re.search(r'(\d{4}-\d{2}-\d{2})', record)
             if all([title_match, url_match, date_match]):
                 title = title_match.group(2)
                 date_str = date_match.group(1)
@@ -153,7 +153,7 @@ def save_to_supabase(data_list):
     """保存数据到Supabase，使用db_utils统一处理"""
     try:
         from db_utils import save_to_policy
-        return save_to_policy(data_list, "江苏省农业农村厅_通知公告")
+        return save_to_policy(data_list, "江苏省教育厅_通知公告")
     except Exception:
         return data_list
 
@@ -175,7 +175,7 @@ def run():
             print("⚠️  未找到目标日期的文章")
             return data
     except Exception as e:
-        print(f"❌ 爬虫 江苏省农业农村厅通知公告 运行失败 - {e}")
+        print(f"❌ 爬虫 江苏省教育厅通知公告 运行失败 - {e}")
         print("----------------------------------------")
         return []
 
