@@ -498,19 +498,19 @@ if __name__ == "__main__":
     except ImportError as e:
         print(f"⚠️  导入江苏省农业农村厅_通知公告爬虫失败: {e}")
     
-    # 导入江苏省教育厅通知公告爬虫
+    # 导入江苏省教育厅政策文件爬虫
     try:
-        import jiangsu_jyt_tzgg_crawler
-        manager.register_crawler("江苏省教育厅_通知公告", jiangsu_jyt_tzgg_crawler.run, jiangsu_jyt_tzgg_crawler)
+        import jiangsu_jyt_zcwj_crawler
+        manager.register_crawler("江苏省教育厅_政策文件", jiangsu_jyt_zcwj_crawler.run, jiangsu_jyt_zcwj_crawler)
     except ImportError as e:
-        print(f"⚠️  导入江苏省教育厅_通知公告爬虫失败: {e}")
+        print(f"⚠️  导入江苏省教育厅_政策文件爬虫失败: {e}")
 
-    # 导入江苏省科学技术厅科技动态爬虫
+    # 导入江苏省科学技术厅政策文件爬虫
     try:
-        import jiangsu_kxjst_kjdt_crawler
-        manager.register_crawler("江苏省科学技术厅_科技动态", jiangsu_kxjst_kjdt_crawler.run, jiangsu_kxjst_kjdt_crawler)
+        import jiangsu_kxjst_zcwj_crawler
+        manager.register_crawler("江苏省科学技术厅_政策文件", jiangsu_kxjst_zcwj_crawler.run, jiangsu_kxjst_zcwj_crawler)
     except ImportError as e:
-        print(f"⚠️  导入江苏省科学技术厅_科技动态爬虫失败: {e}")
+        print(f"⚠️  导入江苏省科学技术厅_政策文件爬虫失败: {e}")
 
     # 导入江苏省知产局通知公告爬虫
     try:
