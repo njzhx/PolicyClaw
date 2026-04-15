@@ -5,8 +5,8 @@ from datetime import datetime, timedelta, timezone
 import re
 
 # 目标网站URL
-TARGET_URL = "https://jyt.jiangsu.gov.cn/col/col58320/index.html"
-SOURCE_NAME = "江苏省教育厅_通知公告"
+TARGET_URL = "https://jyt.jiangsu.gov.cn/col/col77616/index.html"
+SOURCE_NAME = "江苏省教育厅_政策文件"
 
 # ==========================================
 # 1. 网页抓取逻辑
@@ -55,8 +55,8 @@ def scrape_data():
         
         recordset_content = recordset_match.group(1)
         
-        # 提取所有record
-        records = re.findall(r'<record><!\[CDATA\[(.*?)\]\]></record>', recordset_content, re.DOTALL)
+        # 提取所有record（新页面需要去掉 CDATA 匹配）
+        records = re.findall(r'<record>(.*?)</record>', recordset_content, re.DOTALL)
         all_items = len(records)
         
         print(f"📋 找到 {all_items} 篇文章")
@@ -105,7 +105,6 @@ def scrape_data():
                     content_elem = detail_soup.select_one('#zoom')
                     if content_elem:
                         content = content_elem.get_text(strip=True)
-                        # 移除来源信息
                         content = re.sub(r'来源：.*$', '', content, flags=re.DOTALL)
                 except Exception as e:
                     print(f"⚠️  抓取详情页失败：{url} - {e}")
@@ -117,13 +116,13 @@ def scrape_data():
                     'content': content,
                     'selected': False,
                     'category': '',
-                    'source': '江苏省教育厅通知公告'
+                    'source': '江苏省教育厅政策文件'
                 }
                 policies.append(policy_data)
             else:
                 non_target_date_items += 1
         
-        print(f"✅ 江苏省教育厅通知公告爬虫：成功抓取 {target_date_items} 条前一天数据")
+        print(f"✅ 江苏省教育厅政策文件爬虫：成功抓取 {target_date_items} 条前一天数据")
         print(f"⏭️  过滤掉 {non_target_date_items} 条非目标日期的数据")
         
         # 收集所有文章信息用于显示最新5条
@@ -153,7 +152,7 @@ def save_to_supabase(data_list):
     """保存数据到Supabase，使用db_utils统一处理"""
     try:
         from db_utils import save_to_policy
-        return save_to_policy(data_list, "江苏省教育厅_通知公告")
+        return save_to_policy(data_list, SOURCE_NAME)
     except Exception:
         return data_list
 
@@ -175,7 +174,7 @@ def run():
             print("⚠️  未找到目标日期的文章")
             return data
     except Exception as e:
-        print(f"❌ 爬虫 江苏省教育厅通知公告 运行失败 - {e}")
+        print(f"❌ 爬虫 江苏省教育厅政策文件 运行失败 - {e}")
         print("----------------------------------------")
         return []
 
