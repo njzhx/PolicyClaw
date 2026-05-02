@@ -26,24 +26,24 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 彻底禁用 Snap 并安装 Google Chrome
+      - name: 安装 Google Chrome (通用自动补全依赖版)
         run: |
-          # 1. 等待并强制释放 apt 锁，防止后台自动更新占用
+          # 1. 强制释放锁
           sudo fuser -kk /var/lib/dpkg/lock-frontend || true
-          sudo fuser -kk /var/lib/apt/lists/lock || true
           sudo dpkg --configure -a
           
-          # 2. 阻止 apt 尝试安装 snap 版 chromium
+          # 2. 屏蔽 Snap 版 Chromium
           sudo printf "Package: chromium-browser\nPin: release *\nPin-Priority: -1\n" | sudo tee /etc/apt/preferences.d/nosnap.pref
           
-          # 3. 安装依赖和 Google Chrome
+          # 3. 下载 Chrome
           sudo apt-get update
-          sudo apt-get install -y wget fonts-liberation libnss3 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2
-          
+          sudo apt-get install -y wget
           wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
           
-          # 4. 建立软链接兼容性
+          # 4. 核心改动：直接用 apt 安装本地 deb 文件，它会自动识别并安装所需的 libasound2 或 libasound2t64
+          sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+          
+          # 5. 建立软链接兼容性
           sudo ln -s /usr/bin/google-chrome /usr/bin/chromium-browser || true
           
           google-chrome --version
