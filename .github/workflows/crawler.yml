@@ -28,21 +28,22 @@ jobs:
 
       - name: 彻底禁用 Snap 并安装 Google Chrome
         run: |
-          # 1. 等待后台 apt 锁释放，防止冲突
-          sudo lib/dpkg/lock-frontend >/dev/null 2>&1 || while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do sleep 1; done
+          # 1. 等待并强制释放 apt 锁，防止后台自动更新占用
+          sudo fuser -kk /var/lib/dpkg/lock-frontend || true
+          sudo fuser -kk /var/lib/apt/lists/lock || true
+          sudo dpkg --configure -a
           
           # 2. 阻止 apt 尝试安装 snap 版 chromium
           sudo printf "Package: chromium-browser\nPin: release *\nPin-Priority: -1\n" | sudo tee /etc/apt/preferences.d/nosnap.pref
           
-          # 3. 安装依赖
+          # 3. 安装依赖和 Google Chrome
           sudo apt-get update
           sudo apt-get install -y wget fonts-liberation libnss3 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2
           
-          # 4. 直接安装 Google Chrome
           wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
           
-          # 5. 建立软链接兼容性
+          # 4. 建立软链接兼容性
           sudo ln -s /usr/bin/google-chrome /usr/bin/chromium-browser || true
           
           google-chrome --version
