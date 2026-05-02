@@ -2,17 +2,14 @@ name: 政策爬虫定时执行
 
 on:
   schedule:
-    # 北京时间凌晨3点整（UTC时间前一天19:00）
     - cron: '0 19 * * *'
   workflow_dispatch:
-    # 允许手动触发
 
 jobs:
   crawl:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      # 强制使用 Node.js 24 运行 GitHub Actions
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     
     steps:
@@ -29,12 +26,22 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: 安装 Google Chrome (绕过 Snap 限制)
+      - name: 彻底禁用 Snap 并安装 Google Chrome
         run: |
+          # 1. 阻止 apt 尝试安装 snap 版 chromium
+          sudo printf "Package: chromium-browser\nPin: release *\nPin-Priority: -1\n" | sudo tee /etc/apt/preferences.d/nosnap.pref
+          
+          # 2. 安装 Chrome 必要的底层依赖
           sudo apt-get update
           sudo apt-get install -y wget fonts-liberation libnss3 libatk-bridge2.0-0 libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 libgbm1 libasound2
+          
+          # 3. 直接下载并安装官方 Google Chrome (.deb)
           wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo apt-get install -y ./google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
+          
+          # 4. 建立软链接，如果你的代码在找 chromium-browser，让它直接用 google-chrome
+          sudo ln -s /usr/bin/google-chrome /usr/bin/chromium-browser || true
+          
           google-chrome --version
 
       - name: 安装依赖
@@ -45,10 +52,8 @@ jobs:
       - name: 执行爬虫
         run: python crawler_manager.py
         env:
-          # Supabase 环境变量（需要在 GitHub 仓库设置 Secrets）
           SUPABASE_PROJECT_API: ${{ secrets.SUPABASE_PROJECT_API }}
           SUPABASE_ANON_PUBLIC: ${{ secrets.SUPABASE_ANON_PUBLIC }}
-          # 飞书机器人 Webhook（需要在 GitHub 仓库设置 Secrets）
           FEISHU_BOT_WEBHOOK: ${{ secrets.FEISHU_BOT_WEBHOOK }}
       
       - name: 输出执行结果
