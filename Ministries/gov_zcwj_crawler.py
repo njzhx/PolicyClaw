@@ -30,42 +30,51 @@ TARGET_URL = "https://sousuo.www.gov.cn/zcwjk/policyDocumentLibrary?q=&t=zhengce
 
 def scrape_with_selenium():
     options = Options()
-    options.add_argument('--headless')
+    options.add_argument('--headless=new')
     options.add_argument('--no-sandbox')
     options.add_argument('--disable-dev-shm-usage')
     options.add_argument('--disable-gpu')
     options.add_argument('--disable-extensions')
     options.add_argument('--disable-logging')
-    options.add_argument('--log-level=3')
     options.add_argument('--disable-software-rasterizer')
+    options.add_argument('--disable-gpu-sandbox')
+    options.add_argument('--ignore-certificate-errors')
+    options.add_argument('--disable-setuid-sandbox')
     options.add_argument('--window-size=1920,1080')
     options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
     options.add_argument('--disable-blink-features=AutomationControlled')
+    options.add_argument('--disable-web-security')
+    options.add_argument('--allow-running-insecure-content')
     
-    max_retries = 3
+    max_retries = 2
     for attempt in range(max_retries):
         try:
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=options)
             
-            driver.set_page_load_timeout(60)
+            driver.set_page_load_timeout(45)
+            driver.set_script_timeout(45)
             driver.get(TARGET_URL)
             
-            time.sleep(15)
+            time.sleep(8)
             
             last_height = driver.execute_script("return document.body.scrollHeight")
             scroll_count = 0
-            max_scrolls = 20
+            max_scrolls = 15
             
             while scroll_count < max_scrolls:
                 for _ in range(3):
                     driver.execute_script("window.scrollBy(0, 500);")
-                    time.sleep(0.5)
+                    time.sleep(0.3)
                 
                 driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
-                time.sleep(2)
+                time.sleep(1)
                 
-                new_height = driver.execute_script("return document.body.scrollHeight")
+                try:
+                    new_height = driver.execute_script("return document.body.scrollHeight")
+                except:
+                    new_height = last_height
+                
                 if new_height == last_height:
                     scroll_count += 1
                 else:
@@ -75,11 +84,7 @@ def scrape_with_selenium():
                 if scroll_count >= 3:
                     break
             
-            WebDriverWait(driver, 30).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, '.middle_result_con'))
-            )
-            
-            time.sleep(3)
+            time.sleep(2)
             
             page_source = driver.page_source
             driver.quit()
@@ -93,7 +98,7 @@ def scrape_with_selenium():
                 pass
             
             if attempt < max_retries - 1:
-                time.sleep(5)
+                time.sleep(3)
     
     return None
 
