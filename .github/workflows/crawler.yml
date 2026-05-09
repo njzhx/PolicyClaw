@@ -21,6 +21,25 @@ jobs:
           sudo timedatectl set-timezone Asia/Shanghai
           date
       
+      - name: Add domain mapping to hosts
+        run: |
+          echo "36.156.81.221 www.mca.gov.cn" | sudo tee -a /etc/hosts
+          echo "36.156.173.115 gi.mnr.gov.cn" | sudo tee -a /etc/hosts
+          echo "36.156.81.222 www.mohurd.gov.cn" | sudo tee -a /etc/hosts
+          
+          # 打印当前的 hosts 文件内容确认写入情况（可选）
+          cat /etc/hosts
+          
+          # 执行验证（-c 2 表示发送 2 个包，成功即继续，失败则报错）
+          echo "Verifying www.mca.gov.cn..."
+          ping -c 2 www.mca.gov.cn
+          
+          echo "Verifying gi.mnr.gov.cn..."
+          ping -c 2 gi.mnr.gov.cn
+
+          echo "Verifying www.mohurd.gov.cn..."
+          ping -c 2 www.mohurd.gov.cn
+    
       - name: 设置 Python
         uses: actions/setup-python@v6
         with:
