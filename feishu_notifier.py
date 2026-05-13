@@ -246,8 +246,8 @@ class FeishuNotifier:
                 {"tag": "text", "text": f"📊 API推送统计: 成功 {api_success_count} 个, 失败 {api_error_count} 个"}
             ])
         
-        # 发送富文本消息
-        return self.send_rich_text("爬虫执行结果", content)
+        # 发送富文本消息（标题需包含飞书机器人关键词"政策"）
+        return self.send_rich_text("政策爬虫执行结果", content)
     
     def _send(self, payload):
         """发送消息到飞书
