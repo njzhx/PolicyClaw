@@ -163,6 +163,12 @@ def scrape_single_config(config):
         print(f'[OK] {source_name}：成功抓取 {len(policies)} 条前一天数据')
         print(f'[SKIP] 过滤掉 {filtered_count} 条非目标日期的数据')
 
+        if all_items:
+            print('[INFO] 页面最新5条是：')
+            for i, item in enumerate(all_items[:5], 1):
+                date_str = item['pub_at'].strftime('%Y-%m-%d') if item['pub_at'] else '未知日期'
+                print(f'  {i}. {item["title"][:60]}... {date_str}')
+
     except Exception as e:
         print(f'[ERROR] {source_name}：抓取失败 - {e}')
         print("----------------------------------------")
@@ -183,10 +189,11 @@ def create_runner(config):
         try:
             data, _ = scrape_single_config(config)
             result = save_to_supabase(data, config['name'])
-            print(f'[DB] 写入数据库: {len(result)} 条')
+            db_result = result[0] if isinstance(result, tuple) else result
+            print(f'[DB] 写入数据库: {len(db_result)} 条')
             print("----------------------------------------")
             print(f"[OK] 爬虫 {config['name']} 执行成功")
-            return result
+            return db_result
         except Exception as e:
             print(f'[ERROR] 爬虫 {config["name"]} 运行失败 - {e}')
             print("----------------------------------------")
@@ -204,9 +211,4 @@ if __name__ == "__main__":
         print(f"\n{'='*60}")
         print(f"测试爬虫: {config['name']}")
         print(f"{'='*60}")
-        policies, all_items = scrape_single_config(config)
-        if all_items:
-            print('[INFO] 页面最新5条是：')
-            for i, item in enumerate(all_items[:5], 1):
-                date_str = item['pub_at'].strftime('%Y-%m-%d') if item['pub_at'] else '未知日期'
-                print(f'  {i}. {item["title"][:60]}... {date_str}')
+        scrape_single_config(config)
