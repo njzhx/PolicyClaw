@@ -196,34 +196,19 @@ class CrawlerManager:
         # 获取完整日志
         full_log = dual_out.getvalue() + dual_err.getvalue()
         
-        # 从日志中解析API推送结果
-        import re
-        api_results = {}
+        # 从self.results收集API推送结果（统一来源，避免名称不匹配问题）
+        api_results = []
         api_success_count = 0
         api_error_count = 0
         
-        # 匹配"✅ {crawler_name}：成功推送 X 条数据到API"格式
-        api_pattern = re.compile(r'✅\s*([^：\n]+)：成功推送\s*(\d+)\s*条数据到API')
-        for match in api_pattern.finditer(full_log):
-            crawler_name = match.group(1).strip()
-            count = match.group(2)
-            message = f"成功推送 {count} 条数据到API"
-            api_results[crawler_name] = {"status": "success", "message": message}
-            api_success_count += 1
-        
-        # 匹配"❌ {crawler_name}：API推送失败 - ..."格式
-        api_error_pattern = re.compile(r'❌\s*([^：\n]+)：API推送失败\s*-\s*(.*?)(?=\n|$)')
-        for match in api_error_pattern.finditer(full_log):
-            crawler_name = match.group(1).strip()
-            error_msg = match.group(2).strip()
-            message = f"API推送失败 - {error_msg}"
-            api_results[crawler_name] = {"status": "error", "message": message}
-            api_error_count += 1
-        
-        # 将解析到的API推送结果保存到self.results中
         for crawler_name, result in self.results.items():
-            if crawler_name in api_results:
-                result['api_push_result'] = api_results[crawler_name]
+            if 'api_push_result' in result and result['api_push_result']:
+                api_result = result['api_push_result']
+                api_results.append((crawler_name, api_result))
+                if api_result.get('status') == 'success':
+                    api_success_count += 1
+                else:
+                    api_error_count += 1
         
         # 恢复标准输出
         sys.stdout = original_stdout
@@ -234,7 +219,7 @@ class CrawlerManager:
         print("-" * 40)
         
         if api_results:
-            for crawler_name, api_result in api_results.items():
+            for crawler_name, api_result in api_results:
                 if api_result.get('status') == 'success':
                     print(f"✅ {crawler_name}：{api_result.get('message')}")
                 else:
