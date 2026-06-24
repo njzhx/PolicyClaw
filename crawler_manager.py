@@ -758,6 +758,13 @@ if __name__ == "__main__":
     except ImportError as e:
         print(f"⚠️  导入江苏省水利厅规范性文件爬虫失败: {e}")
 
+    # 导入江苏省粮食和物资储备厅信息公开爬虫
+    try:
+        from Jiangsu import jiangsu_lsj_xxgk_crawler
+        manager.register_crawler("江苏省粮食和物资储备厅_信息公开", jiangsu_lsj_xxgk_crawler.run, jiangsu_lsj_xxgk_crawler)
+    except ImportError as e:
+        print(f"⚠️  导入江苏省粮食和物资储备厅信息公开爬虫失败: {e}")
+
     # 导入交通运输部政府信息公开爬虫
     try:
         from Ministries import mot_fdzdgk_crawler
