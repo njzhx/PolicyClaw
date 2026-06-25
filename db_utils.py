@@ -126,7 +126,11 @@ class DBUtils:
             print(f"⚠️  {source_name}：没有数据需要推送，跳过。")
             return {"status": "skipped", "message": "没有数据需要推送"}
         
-        target_url = "http://47.114.109.178:5000/api/receive-data"
+        vps_ip = os.environ.get('VPS_IP')
+        if not vps_ip:
+            print(f"⚠️  {source_name}：VPS_IP 环境变量未设置，跳过推送。")
+            return {"status": "skipped", "message": "VPS_IP 环境变量未设置"}
+        target_url = f"http://{vps_ip}:5000/api/receive-data"
         
         try:
             # 构造JSON结构（按照接口示例格式）
